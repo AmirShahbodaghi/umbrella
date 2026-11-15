@@ -1,0 +1,55 @@
+# replicaCount: 0
+# image:
+#   registry: pull-devops.tamin.ir
+#   repository: ""
+#   tag: ""
+#   pullPolicy: IfNotPresent
+
+# serviceAccount:
+#   create: true
+#   annotations: {}
+
+# service:
+#   type: ClusterIP
+#   port: 80
+#   targetPort: 8080
+
+# resources:
+#   limits:
+#     cpu: 1000m
+#     memory: 1Gi
+#   requests:
+#     cpu: 500m
+#     memory: 800Mi
+
+# autoscaling:
+#   enabled: false
+#   minReplicas: 1
+#   maxReplicas: 4
+#   targetCPUUtilizationPercentage: 80
+
+# ingress:
+#   enabled: false
+#   className: "nginx"
+#   hosts: []
+#   tls: []
+
+# storage:
+#   nfs:
+#     enabled: false
+#     server: ""
+#     path: ""
+#   pvc:
+#     enabled: false
+#   mountPath: /logs
+#   nfs_apm:
+#     enabled: false
+#     path: ""
+#     mountPath: /opt/apm-agent
+
+# # free-form, non-sensitive env vars — see configmap step
+# env: {}
+
+# # names of EXISTING k8s secrets created manually with kubectl
+# # the chart only references these, never creates them
+# secretRefs: []

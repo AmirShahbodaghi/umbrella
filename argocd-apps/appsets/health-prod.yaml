@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: health-prod-apps
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://ci.tamin.ir/devops/cd/umbrella/health/prod.git
+        revision: main
+        files:
+          - path: "*.yaml"
+  template:
+    metadata:
+      name: "{{appName}}"
+      namespace: argocd
+    spec:
+      project: health-prod
+      sources:
+        - repoURL: https://ci.tamin.ir/devops/cd/umbrella/helm-generic.git
+          targetRevision: main
+          path: .
+          helm:
+            valueFiles:
+              - $values/{{path.filename}}
+        
+        - repoURL: https://ci.tamin.ir/devops/cd/umbrella/health/prod.git
+          targetRevision: main
+          path: .
+          ref: values
+      
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: health-prod
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+

@@ -1,0 +1,24 @@
+{{- if or .Values.configmap .Values.appsettings_enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "generic-app.fullname" . }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+data:
+  HISTFILE: "/audit/commands.log"
+  HISTTIMEFORMAT: "%F %T "
+  PROMPT_COMMAND: "history 1 >> /audit/commands.log"
+  TZ: "Asia/Tehran"
+  {{- range $key, $value := .Values.configmap }}
+  {{- if ne $key "appsettings_enabled" }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.appsettings_enabled }}
+  {{- if .Values.appsettings }}
+  appsettings.json: |
+    {{- .Values.appsettings | toString | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}

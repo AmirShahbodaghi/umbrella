@@ -1,0 +1,54 @@
+{{- if .Values.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- if .Values.serviceName }}
+  name: {{ include "generic-app.serviceName" . }}
+  {{- else }}
+  name: {{ include "generic-app.fullname" . }}
+  {{- end }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  ports:
+    {{- range .Values.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: TCP
+    {{- end }}
+    {{- if and .Values.jmxExporter  }}
+    - name: metrics
+      port: {{ .Values.jmxExporter.port | default 9010 }}
+      targetPort: {{ .Values.jmxExporter.port | default 9010 }}
+      protocol: TCP
+    {{- end }}
+  selector:
+    {{- include "generic-app.selectorLabels" . | nindent 4 }}
+{{- end }}
+
+{{- if and .Values.service2 .Values.service2.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- if .Values.serviceName }}
+  name: {{ include "generic-app.serviceName" . }}-secondary
+  {{- else }}
+  name: {{ include "generic-app.fullname" . }}-secondary
+  {{- end }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service2.type | default "ClusterIP" }}
+  ports:
+    {{- range .Values.service2.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: TCP
+    {{- end }}
+  selector:
+    {{- include "generic-app.selectorLabels" . | nindent 4 }}
+{{- end }}

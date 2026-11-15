@@ -1,0 +1,17 @@
+{{- if .Values.storage.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "generic-app.fullname" . }}-logs-pvc
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.storage.pvc.accessMode }}
+  {{- if .Values.storage.pvc.storageClass }}
+  storageClassName: {{ .Values.storage.pvc.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.pvc.size }}
+{{- end }}

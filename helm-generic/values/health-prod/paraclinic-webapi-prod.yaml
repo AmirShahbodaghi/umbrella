@@ -1,0 +1,237 @@
+environment: prod
+
+replicaCount: 0
+appName: paraclinic-webapi-prod
+ 
+secrets:
+  enabled: true
+  refs:
+    - paraclinic-webapi-prod
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/health/paraclinic-webapi
+  pullPolicy: IfNotPresent
+  tag:  v2.2.4-prod
+
+
+
+
+
+
+
+imagePullSecrets: []
+  # - name: registry-secret
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+# Storage configuration
+storage:
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate   # optional
+  # Enable NFS storage
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/logs-ap/ap-prod/paraclinic-webapi"
+    mountPath: /app/logs
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+  
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/logs-ap/ap-prod/paraclinic-webapi/shelllog"
+
+
+  nfs_apm:
+    enabled: false
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent    
+
+
+
+# Environment variables
+configmap:
+
+
+httpRoute:
+  enabled: true
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - "parawebapi.tamin.ir"
+  rules:
+    - port: 8080         
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api
+
+httpRoute2:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - "***"
+  rules:
+    - port: 8081        
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+
+rateLimitPolicy:
+  enabled: false
+  rules:
+    - requests: 10
+      unit: Minute
+
+rateLimitPolicy2:
+  enabled: false          
+  rules:
+    - requests: 100       
+      unit: Second         
+    - requests: 10
+      unit: Second
+      headers:
+        - name: x-api-key
+          value: "free-tier"
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+appsettings_enabled: true
+
+
+
+appsettings: |
+  {
+    "Logging": {
+      "LogLevel": {
+        "Default": "Information",
+        "Microsoft.AspNetCore": "Warning"
+      },
+      "dir": "/app/logs"
+    },
+    "ConnectionStrings": {
+      "TmdsConnection" : "",
+      "DarmanDb": "",
+      "BaseInfoConnection": "",
+      "ACSConnection": ""
+    },
+    "gRPCURL": {
+      "ParaclinicReport": "http://darman-report-prod:8080/",
+      "ClinicReport": "http://darman-report-prod:8080/",
+      "GeneralService": "http://grpc-generalservice-prod:8080/",
+      "SataEpBridge": "http://darman-sata-prod:8080/",
+      "RuleEngine": "http://grpc-darmanruleengine-prod:8080/",
+      "ExtendedPriceEngServices": "http://grpc-darmanruleengine-prod:8080/",
+      "LabPriceEngine": "http://grpc-priceservice-prod:8080/",
+      "AutismPriceEngine": "http://grpc-priceservice-prod:8080/",
+      "PhysioPriceEngine": "http://grpc-priceservice-prod:8080/",
+      "ParaclinicTmds": "http://grpc-tmds-paraclinic:8080/",
+      "PriceEngine": "http://grpc-priceservice-prod:8080/",
+      "SpecialPatient": "http://grpc-specialpatient-prod:8080",
+      "BarcodeService": "http://darman-barcode-prod:8080/",
+      "RadioPrice": "http://grpc-priceservice-prod:8080/"
+    },
+    "Utility": {
+      "BaseUrl": "http://general-utilities-prod:8080/api/"
+    },
+    "GeneralProvider": {
+      "BaseUrl": "https://general.tamin.ir/api/"
+    },
+    "EPEndpoint": {
+      "GetToken": "https://soa.tamin.ir/ws/api/auth/login",
+      "PostRdtpPrescToEP": "https://ep.tamin.ir/api/radiationTherapy",
+      "DeleteRdtpPrescFromEPUrl": "https://ep.tamin.ir/api/radiationTherapy/remove/"
+    },
+    "EPConfig": {
+      "ClientId": "2d3e5d656b76397241056f7836464312",
+      "ClientSecret": "",
+      "GrantType": "client_credentials"
+    },
+    "BaseWebPath": "/ParaWebAPI",
+    "AllowedHosts": "*",
+    "Serilog": {
+        "MinimumLevel": "Fatal",
+        "WriteTo": [
+          {
+            "Name": "File",
+            "Args": {
+              "path": "app/logs/paraclinic-health-log-.txt",
+              "rollingInterval": "Day",
+              "rollOnFileSizeLimit": true,
+              "outputTemplate": "{Message}{NewLine}"
+              
+            }
+          }
+        ]
+      },
+    "CacheTime": 24
+  }
+
+
+
+

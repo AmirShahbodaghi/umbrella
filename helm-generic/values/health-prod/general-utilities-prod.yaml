@@ -1,0 +1,222 @@
+environment: prod
+
+replicaCount: 0
+appName: general-utilities-prod
+ 
+secrets:
+  enabled: true
+  refs:
+    - general-utilities-prod
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/health/general-utilities
+  pullPolicy: IfNotPresent
+  tag: v2.1.1-prod
+
+
+imagePullSecrets: []
+  # - name: registry-secret
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+# Storage configuration
+storage:
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate   # optional
+  # Enable NFS storage
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/applications/ap-prod/general-utilities"
+    mountPath: /app/logs
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+  
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/applications/ap-prod/general-utilities/shelllog"
+
+
+  nfs_apm:
+    enabled: false
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent    
+
+
+
+# Environment variables
+configmap:
+
+
+httpRoute:
+  enabled: true
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - "utilities.tamin.ir"
+  rules:
+    - port: 8080         
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api
+
+httpRoute2:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - "***"
+  rules:
+    - port: 8081        
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+
+rateLimitPolicy:
+  enabled: false
+  rules:
+    - requests: 10
+      unit: Minute
+
+rateLimitPolicy2:
+  enabled: false          
+  rules:
+    - requests: 100       
+      unit: Second         
+    - requests: 10
+      unit: Second
+      headers:
+        - name: x-api-key
+          value: "free-tier"
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+appsettings_enabled: true
+
+# ConnectionStrings__TmdsDb: "Data Source=(DESCRIPTION = (ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = DGCHCore-scan.ssodc.ir)(PORT = 1521))) (CONNECT_DATA = (SERVICE_NAME = HCoredb.ssodc.ir)));User Id=tmdscore1404;Password=tmdscore;"
+# ConnectionStrings__DarmanDb: "Data Source=(DESCRIPTION = (ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = DCCHCore-scan.ssodc.ir)(PORT = 1521))) (CONNECT_DATA = (SERVICE_NAME = HCoredb.ssodc.ir)));User Id=tottmds;Password=tamin2011;"
+# Redis__SentinelHosts__0: "redbas.tamin.ir:1371"
+# Redis__SentinelHosts__1: "redbas.tamin.ir:1372"
+# Redis__SentinelHosts__2: "redbas.tamin.ir:1373"
+# Redis__MasterName: "mymaster"
+# Redis__Password: "50byqnf06ZXhredhery5439639uS8j6DlHB"
+
+
+appsettings: |
+  {
+    "Logging": {
+      "LogLevel": {
+        "Default": "Information",
+        "Microsoft.AspNetCore": "Warning"
+      },
+      "dir": "/app/logs"
+    },
+    "OpenTelemetry": {
+      "Endpoint": "http://apm-devops.tamin.ir:8200",
+      "Environment": "ap-prod",
+      "ElasticToken": ""
+    },
+    "AllowedHosts": "*",
+    "ConnectionStrings": {
+      "TmdsDb": "",
+      "DarmanDb": ""
+    },
+    "gRPCURL": {
+      "GeneralService": "http://darman-general-prod:8080",
+      "TariffinityDrugSyncService": "http://darman-tariffinity-prod:8080",
+      "ReportService": "http://darman-report-prod:8080",
+      "SubsidyCalculationService": "http://darman-general-prod:8080",
+      "DarmanCMDSCore": "http://cmds-core-net-prod:8080",
+    },
+    "GeneralProvider": {
+      "BaseUrl": ""
+    },
+    "Redis": {
+      "SentinelHosts": [
+        "redbas.tamin.ir:1371",
+        "redbas.tamin.ir:1372",
+        "redbas.tamin.ir:1373"
+      ],
+      "MasterName": "mymaster",
+      "Password": "",
+      "Database": 0,
+      "ConnectRetry": 3,
+      "ConnectTimeout": 600
+    },
+    "AuthGateway": {
+      "ClientId": "110b91793a552033728243444622365a"
+    },  
+    "CacheTime": 24
+  }
+
+
+
+
+
+
+

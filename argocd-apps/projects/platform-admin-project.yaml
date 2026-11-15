@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-admin
+  namespace: argocd
+spec:
+  description: "Bootstraps AppProjects and ApplicationSets only — not a workload project"
+ 
+  # root-app may only pull from this one repo
+  sourceRepos:
+    - "https://ci.tamin.ir/devops/cd/test/general/argocd-apps.git"
+ 
+  # root-app only ever needs to touch the argocd namespace itself
+  destinations:
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+ 
+  # cluster-scoped objects root-app is allowed to create
+  clusterResourceWhitelist:
+    - group: "argoproj.io"
+      kind: AppProject
+    - group: "argoproj.io"
+      kind: ApplicationSet
+ 
+  # namespaced objects root-app is allowed to create (inside argocd ns)
+  namespaceResourceWhitelist:
+    - group: "argoproj.io"
+      kind: Application

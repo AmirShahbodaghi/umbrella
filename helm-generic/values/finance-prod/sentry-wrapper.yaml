@@ -1,0 +1,198 @@
+environment: prod
+
+replicaCount: 4
+appName: wrapper-back-prod
+appsettings_enabled: false  
+
+secrets:
+  enabled: true
+  refs:
+    - wrapper-back-prod
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/finance/sentry-wrapper
+  pullPolicy: IfNotPresent
+  tag: v1.0.35-prod
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+service:
+  enabled: true
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 9001
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+storage:
+
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/wrapper/back"
+    mountPath: /app/logs
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/wrapper/shelllog"
+
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate   
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_apm:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent       
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+  
+  fourth_nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: /data/k8s-nfs/prometheus
+    mountPath: /opt/prometheus 
+
+jmxExporter:
+  port: 9010
+
+serviceMonitor:
+  interval: "15s"
+  scrapeTimeout: "10s"
+  path: "/metrics"    
+
+configmap:
+  SPRING_PROFILES_ACTIVE: prod
+  CATALINA_OPTS: >-
+    -Xms2g
+    -Xmx8g
+    -XX:MaxMetaspaceSize=512m
+    -XX:+UseG1GC
+    -XX:+UseContainerSupport
+    -Djava.awt.headless=true
+    -Djdk.tls.ephemeralDHKeySize=2048
+    -Dorg.apache.catalina.security.SecurityListener.UMASK=0027
+    --add-opens=java.base/java.lang=ALL-UNNAMED
+    --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+    --add-opens=java.base/java.io=ALL-UNNAMED
+    --add-opens=java.base/java.util=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+    --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED
+    --enable-native-access=ALL-UNNAMED
+
+  ELASTIC_APM_VERIFY_SERVER_CERT: false
+  ELASTIC_APM_SERVER_URL: "http://apm-devops.tamin.ir:8201"
+  ELASTIC_APM_SERVICE_NAME: "wrapper-back-prod"
+  ELASTIC_APM_ENVIRONMENT: "Finance-prod"
+  ELASTIC_APM_LOG_LEVEL: "INFO" 
+  ELASTIC_APM_APPLICATION_PACKAGES: "org.tamin,ir.tamin"
+  ELASTIC_APM_CAPTURE_BODY: "all"
+  ELASTIC_APM_CAPTURE_HEADERS: "true"
+  ELASTIC_APM_TRANSACTION_SAMPLE_RATE: "0.01" 
+  ELASTIC_APM_SPAN_FRAMES_MIN_DURATION: "10ms" 
+  ELASTIC_APM_STACK_TRACE_LIMIT: "50"
+
+  JAVA_TOOL_OPTIONS: >-
+    -javaagent:/opt/apm-agent/elastic-apm-agent.jar
+    -javaagent:/opt/prometheus/jmx_prometheus_javaagent-1.6.0.jar=9010:/opt/prometheus/jmx-exporter.yaml
+
+resources:
+  limits:
+    cpu: 5000m
+    memory: 11Gi
+  requests:
+    cpu: 250m
+    memory: 3500Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+httpRoute:
+  enabled: true
+  hostnames:
+    - "sw.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+rateLimitPolicy:
+  enabled: false  
+  
+  rules:
+    - requests: 10       
+      unit: Minute      
+      useXForwardedFor: false     
+  pathRules: []
+
+httpRoute2:
+  enabled: false
+  hostnames:
+    - "admin.sw.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+ 
+rateLimitPolicy2:
+  enabled: false
+  rules:
+    - requests: 500
+      unit: Minute
+  pathRules: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+imagePullSecrets: []

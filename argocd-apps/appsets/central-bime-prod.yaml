@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: central-bime-prod-apps
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://ci.tamin.ir/devops/cd/umbrella/central-bime/prod.git
+        revision: main
+        files:
+          - path: "*.yaml"
+  template:
+    metadata:
+      name: "{{appName}}"
+      namespace: argocd
+    spec:
+      project: central-bime-prod
+      sources:
+        - repoURL: https://ci.tamin.ir/devops/cd/umbrella/helm-generic.git
+          targetRevision: main
+          path: .
+          helm:
+            valueFiles:
+              # Reference values from the other source (ref: values)
+              - $values/{{path.filename}}
+        
+        - repoURL: https://ci.tamin.ir/devops/cd/umbrella/central-bime/prod.git
+          targetRevision: main
+          path: .
+          ref: values
+      
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: central-bime-prod
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

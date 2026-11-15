@@ -1,0 +1,24 @@
+{{- if and .Values.grpcRoute .Values.grpcRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: {{ include "generic-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.grpcRoute.parentRefs | nindent 4 }}
+  {{- with .Values.grpcRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - backendRefs:
+        {{- if .Values.serviceName }}
+        - name: {{ include "generic-app.serviceName" . }}
+        {{- else }}
+        - name: {{ include "generic-app.fullname" . }}
+        {{- end }}
+          port: {{ .Values.grpcRoute.port | default 8080 }}
+{{- end }}

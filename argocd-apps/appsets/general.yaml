@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: general-apps
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://ci.tamin.ir/devops/cd/umbrella/helm-generic.git
+        revision: main
+        files:
+          - path: "values/general/*.yaml"
+  template:
+    metadata:
+      name: "{{appName}}"
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: https://ci.tamin.ir/devops/cd/umbrella/helm-generic.git
+        targetRevision: main
+        path: .
+        helm:
+          valueFiles:
+            - "{{path}}/{{path.filename}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: general
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

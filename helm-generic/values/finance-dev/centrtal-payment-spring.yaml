@@ -1,0 +1,196 @@
+environment: dev
+
+replicaCount: 1
+appName: centrtal-payment-spring-dev
+appsettings_enabled: false  
+
+secrets:
+  enabled: false
+  refs:
+    - centrtal-payment-spring
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/finance/central-payment/centrtal-payment-spring
+  pullPolicy: IfNotPresent
+  tag: v0.0.1-dev
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+service:
+  enabled: true
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+storage:
+
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-dev/centrtal-payment-spring-dev"
+    mountPath: /u01/log
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-dev/centrtal-payment-spring-dev/shelllog"
+
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate 
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_apm:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent       
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+  
+  fourth_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: /data/k8s-nfs/prometheus
+    mountPath: /opt/prometheus 
+
+jmxExporter:
+  port: 9010
+
+serviceMonitor:
+  interval: "15s"
+  scrapeTimeout: "10s"
+  path: "/metrics"            
+
+configmap:
+
+  HISTFILE: "/audit/commands.log"
+  HISTTIMEFORMAT: "%F %T "
+  PROMPT_COMMAND: "history 1 >> /audit/commands.log"
+
+  DB_JDBC_URL: "jdbc:oracle:thin:@//172.16.3.203:1521/setadidevdb.tamin.org"
+  DB_USERNAME: "paymentcore"
+  DB_PASSWORD: "paymentcore"
+  KAFKA_BOOTSTRAP_SERVERS: "172.16.14.48:9092,172.16.14.48:9192,172.16.14.48:9292"
+  KAFKA_SCHEMA_REGISTRY_URLS: "172.16.14.48:8081"
+  SPRING_PROFILES_ACTIVE: "test"
+  ORIGINS: "https://centralpay-test.tamin.ir"
+
+  apm:
+    enabled: true
+    verifyServerCert: false
+    serverUrl: "http://apm-devops.tamin.ir:8200"
+    serviceName: "centralpay-dev"
+    enviroment: "finance-dev"
+    logLevel: "INFO" 
+    applicationPackages: ""
+    captureBody: "all"
+    captureHeaders: "true"
+    transactionSampleRate: "1" 
+    spanFramesMinDuration: "0ms" 
+    stackTraceLimit: "50"
+    elastic_agent_apm: "-javaagent:/opt/apm-agent/elastic-apm-agent.jar"
+
+
+resources:
+  limits:
+    cpu: 6000m
+    memory: 12Gi
+  requests:
+    cpu: 2000m
+    memory: 2Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+httpRoute:
+  enabled: false
+  hostnames:
+    - "centrtal-payment-spring.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+rateLimitPolicy:
+  enabled: false  
+  
+  rules:
+    - requests: 1000       
+      unit: Minute      
+      perIP: false     
+  pathRules: []
+
+httpRoute2:
+  enabled: false
+  hostnames:
+    - "admin.bankoperation.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8081
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+ 
+rateLimitPolicy2:
+  enabled: false
+  rules:
+    - requests: 500
+      unit: Minute
+  pathRules: []
+
+timeout:
+  requestTimeout: "300s"  
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+imagePullSecrets: []

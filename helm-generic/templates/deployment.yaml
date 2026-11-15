@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "generic-app.fullname" . }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "generic-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "generic-app.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "generic-app.serviceAccountName" . }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ include "generic-app.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        {{- if and .Values.service .Values.service.enabled }}          
+        {{- range .Values.service.ports }}                             
+        - name: {{ .name }}
+          containerPort: {{ .targetPort }}
+        {{- end }}                                                       
+        {{- end }}                                                        
+        {{- if and .Values.jmxExporter  }}  
+        - name: metrics
+          containerPort: {{ .Values.jmxExporter.port | default 9010 }}
+          protocol: TCP
+        {{- end }}                                                       
+        {{- if and .Values.service2 .Values.service2.enabled }}        
+        {{- range .Values.service2.ports }}                              
+        - name: {{ .name }}
+          containerPort: {{ .targetPort }}
+        {{- end }}                                                       
+        {{- end }}                                                      
+        envFrom:
+        - configMapRef:
+            name: {{ include "generic-app.fullname" . }}
+        {{- if and .Values.secrets .Values.secrets.enabled }}
+        {{- range .Values.secrets.refs }}
+        - secretRef:
+            name: {{ . }}
+        {{- end }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        {{- with .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.startupProbe }}
+        startupProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- if or .Values.storage.nfs.enabled .Values.storage.pvc.enabled .Values.storage.second_nfs.enabled .Values.storage.third_nfs.enabled .Values.storage.nfs_apm.enabled .Values.storage.nfs_shell_log.enabled .Values.storage.hostPath.enabled .Values.appsettings_enabled }}
+        volumeMounts:
+        {{- if .Values.appsettings_enabled }}
+        - name: appsettings-volume
+          mountPath: /app/appsettings.json
+          subPath: appsettings.json
+        {{- end }}
+        {{- if or .Values.storage.nfs.enabled .Values.storage.pvc.enabled }}
+        - name: logs-volume
+          mountPath: {{ .Values.storage.nfs.mountPath }}
+        {{- end }}
+        {{- if .Values.storage.second_nfs.enabled }}
+        - name: second-nfs-volume
+          mountPath: {{ .Values.storage.second_nfs.mountPath }}
+        {{- end }}
+        {{- if .Values.storage.third_nfs.enabled }}
+        - name: third-nfs-volume
+          mountPath: {{ .Values.storage.third_nfs.mountPath }}
+        {{- end }}    
+        {{- if .Values.storage.fourth_nfs.enabled }}
+        - name: fourth-nfs-volume
+          mountPath: {{ .Values.storage.fourth_nfs.mountPath }}
+        {{- end }}     
+        {{- if .Values.storage.nfs_apm.enabled }}
+        - name: apm-elastic
+          mountPath: {{ .Values.storage.nfs_apm.mountPath }}
+        {{- end }}
+        {{- if .Values.storage.nfs_shell_log.enabled }}
+        - name: shell-log
+          mountPath: /audit
+        {{- end }}
+        {{- if .Values.storage.hostPath.enabled }}
+        - name: hostpath-volume
+          mountPath: {{ .Values.storage.hostPath.mountPath }}
+        {{- end }}
+        {{- end }}
+      {{- if or .Values.storage.nfs.enabled .Values.storage.pvc.enabled .Values.storage.second_nfs.enabled .Values.storage.nfs_apm.enabled .Values.storage.third_nfs.enabled .Values.storage.nfs_shell_log.enabled .Values.storage.hostPath.enabled .Values.appsettings_enabled }}
+      volumes:
+      {{- if .Values.appsettings_enabled }}
+      - name: appsettings-volume
+        configMap:
+          name: {{ include "generic-app.fullname" . }}
+          items:
+            - key: appsettings.json
+              path: appsettings.json
+      {{- end }}
+      {{- if or .Values.storage.nfs.enabled .Values.storage.pvc.enabled }}
+      - name: logs-volume
+        {{- if .Values.storage.nfs.enabled }}
+        nfs:
+          server: {{ .Values.storage.nfs.server }}
+          path:  /data/k8s-nfs/applications/{{ .Values.storage.nfs.path }}
+        {{- else if .Values.storage.pvc.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ include "generic-app.fullname" . }}-logs-pvc
+        {{- end }}
+      {{- end }}
+      {{- if .Values.storage.second_nfs.enabled }}
+      - name: second-nfs-volume
+        nfs:
+          server: {{ .Values.storage.second_nfs.server }}
+          path: {{ .Values.storage.second_nfs.path }}
+      {{- end }}
+      {{- if .Values.storage.third_nfs.enabled }}
+      - name: third-nfs-volume
+        nfs:
+          server: {{ .Values.storage.third_nfs.server }}
+          path: {{ .Values.storage.third_nfs.path }}
+      {{- end }} 
+      {{- if .Values.storage.fourth_nfs.enabled }}     
+      - name: fourth-nfs-volume
+        nfs:
+          server: {{ .Values.storage.fourth_nfs.server }}
+          path: {{ .Values.storage.fourth_nfs.path }}
+      {{- end }} 
+      {{- if .Values.storage.nfs_apm.enabled }}
+      - name: apm-elastic
+        nfs:
+          server: {{ .Values.storage.nfs.server }}
+          path: {{ .Values.storage.nfs_apm.path }}
+          readOnly: true
+      {{- end }}
+      {{- if .Values.storage.nfs_shell_log.enabled }}
+      - name: shell-log
+        nfs:
+          server: {{ .Values.storage.nfs_shell_log.server }}
+          path: /data/k8s-nfs/applications/{{ .Values.storage.nfs_shell_log.path }}
+          readOnly: false
+      {{- end }}
+      {{- if .Values.storage.hostPath.enabled }}
+      - name: hostpath-volume
+        hostPath:
+          path: {{ .Values.storage.hostPath.path }}
+          type: {{ .Values.storage.hostPath.type | default "DirectoryOrCreate" }}
+      {{- end }}
+      {{- end }}

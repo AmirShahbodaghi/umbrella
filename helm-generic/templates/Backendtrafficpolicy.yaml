@@ -1,0 +1,204 @@
+{{- if and .Values.rateLimitPolicy .Values.rateLimitPolicy.enabled }}
+{{- if and .Values.httpRoute .Values.httpRoute.enabled }}
+
+{{- if .Values.rateLimitPolicy.rules }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ include "generic-app.fullname" . }}-global
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "generic-app.fullname" . }}
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        {{- range .Values.rateLimitPolicy.rules }}
+        - limit:
+            requests: {{ .requests }}
+            unit: {{ .unit }}
+          {{- if or .perIP .useXForwardedFor .headers }}
+          clientSelectors:
+            {{- if .perIP }}
+            - sourceCIDR:
+                value: 0.0.0.0/0
+                type: Distinct
+            {{- end }}
+            {{- if .useXForwardedFor }}
+            - headers:
+                - name: x-forwarded-for
+                  type: Distinct
+            {{- end }}
+            {{- if .headers }}
+            {{- range .headers }}
+            - headers:
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+  {{- if .Values.timeout }}
+  timeout:
+    http:
+      {{- if .Values.timeout.requestTimeout }}
+      requestTimeout: {{ .Values.timeout.requestTimeout }}
+      {{- end }}
+      {{- if .Values.timeout.idleTimeout }}
+      idleTimeout: {{ .Values.timeout.idleTimeout }}
+      {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.rateLimitPolicy.pathRules }}
+{{- range $i, $rule := .Values.rateLimitPolicy.pathRules }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ include "generic-app.fullname" $ }}-{{ $rule.sectionName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "generic-app.labels" $ | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "generic-app.fullname" $ }}
+      sectionName: {{ $rule.sectionName }}
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - limit:
+            requests: {{ $rule.requests }}
+            unit: {{ $rule.unit }}
+          {{- if $rule.perIP }}
+          clientSelectors:
+            - sourceCIDR:
+                value: 0.0.0.0/0
+                type: Distinct
+          {{- end }}
+  {{- if $.Values.timeout }}
+  timeout:
+    http:
+      {{- if $.Values.timeout.requestTimeout }}
+      requestTimeout: {{ $.Values.timeout.requestTimeout }}
+      {{- end }}
+      {{- if $.Values.timeout.idleTimeout }}
+      idleTimeout: {{ $.Values.timeout.idleTimeout }}
+      {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+{{- if and .Values.rateLimitPolicy2 .Values.rateLimitPolicy2.enabled }}
+{{- if and .Values.httpRoute2 .Values.httpRoute2.enabled }}
+
+{{- if .Values.rateLimitPolicy2.rules }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ include "generic-app.fullname" . }}-secondary-global
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "generic-app.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "generic-app.fullname" . }}-secondary
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        {{- range .Values.rateLimitPolicy2.rules }}
+        - limit:
+            requests: {{ .requests }}
+            unit: {{ .unit }}
+          {{- if or .perIP .useXForwardedFor .headers }}
+          clientSelectors:
+            {{- if .perIP }}
+            - sourceCIDR:
+                value: 0.0.0.0/0
+                type: Distinct
+            {{- end }}
+            {{- if .useXForwardedFor }}
+            - headers:
+                - name: x-forwarded-for
+                  type: Distinct
+            {{- end }}
+            {{- if .headers }}
+            {{- range .headers }}
+            - headers:
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+  {{- if .Values.timeout }}
+  timeout:
+    http:
+      {{- if .Values.timeout.requestTimeout }}
+      requestTimeout: {{ .Values.timeout.requestTimeout }}
+      {{- end }}
+      {{- if .Values.timeout.idleTimeout }}
+      idleTimeout: {{ .Values.timeout.idleTimeout }}
+      {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.rateLimitPolicy2.pathRules }}
+{{- range $i, $rule := .Values.rateLimitPolicy2.pathRules }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: {{ include "generic-app.fullname" $ }}-secondary-{{ $rule.sectionName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "generic-app.labels" $ | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ include "generic-app.fullname" $ }}-secondary
+      sectionName: {{ $rule.sectionName }}
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - limit:
+            requests: {{ $rule.requests }}
+            unit: {{ $rule.unit }}
+          {{- if $rule.perIP }}
+          clientSelectors:
+            - sourceCIDR:
+                value: 0.0.0.0/0
+                type: Distinct
+          {{- end }}
+  {{- if $.Values.timeout }}
+  timeout:
+    http:
+      {{- if $.Values.timeout.requestTimeout }}
+      requestTimeout: {{ $.Values.timeout.requestTimeout }}
+      {{- end }}
+      {{- if $.Values.timeout.idleTimeout }}
+      idleTimeout: {{ $.Values.timeout.idleTimeout }}
+      {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{- end }}
+{{- end }}

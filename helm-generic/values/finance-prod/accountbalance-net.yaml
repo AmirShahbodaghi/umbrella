@@ -1,0 +1,428 @@
+environment: prod
+
+replicaCount: 2
+appName: accountbalance-back-prod
+appsettings_enabled: true  
+
+secrets:
+  enabled: true
+  refs:
+    - accountbalance-back-prod
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/finance/accountbalance/accountbalance-net
+  pullPolicy: IfNotPresent
+  tag: v1.1.1-prod
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+service:
+  enabled: true
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+storage:
+
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/accountbalance/back"
+    mountPath: /app/logs
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/accountbalance/back/shelllog"
+
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate   
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_apm:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent   
+
+  fourth_nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: /data/k8s-nfs/prometheus
+    mountPath: /opt/prometheus 
+
+jmxExporter:
+  port: 9010
+
+serviceMonitor:
+  interval: "15s"
+  scrapeTimeout: "10s"
+  path: "/metrics"           
+
+configmap:
+
+  ELASTIC_APM_VERIFY_SERVER_CERT: false
+  ELASTIC_APM_SERVER_URL: "http://apm-devops.tamin.ir:8201"
+  ELASTIC_APM_SERVICE_NAME: "accountbalance-back-prod"
+  ELASTIC_APM_ENVIRONMENT: "Finance-prod"
+  ELASTIC_APM_LOG_LEVEL: "INFO" 
+  ELASTIC_APM_APPLICATION_PACKAGES: "org.tamin,ir.tamin"
+  ELASTIC_APM_CAPTURE_BODY: "all"
+  ELASTIC_APM_CAPTURE_HEADERS: "true"
+  ELASTIC_APM_TRANSACTION_SAMPLE_RATE: "0.01" 
+  ELASTIC_APM_SPAN_FRAMES_MIN_DURATION: "10ms" 
+  ELASTIC_APM_STACK_TRACE_LIMIT: "50"
+
+  JAVA_TOOL_OPTIONS: >-
+    -javaagent:/opt/apm-agent/elastic-apm-agent.jar
+    -javaagent:/opt/prometheus/jmx_prometheus_javaagent-1.6.0.jar=9010:/opt/prometheus/jmx-exporter.yaml  
+
+  #Cors__AllowedOrigins: 'https://me.tamin.ir;https://accountbalance.tamin.ir;https://account.tamin.ir;https://accountbalance.tamin.ir/api;https://account.tamin.ir/auth/server/token;'
+  ASPNETCORE_ENVIRONMENT: 'Production'
+  TZ: "Asia/Tehran"
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 6Gi
+  requests:
+    cpu: 250m
+    memory: 3500Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+httpRoute:
+  enabled: true
+  hostnames:
+    - "accountbalance.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api
+
+rateLimitPolicy:
+  enabled: true  
+  
+  rules:
+    - requests: 1000       
+      unit: Minute      
+      useXForwardedFor: false     
+  pathRules: []
+
+httpRoute2:
+  enabled: false
+  hostnames:
+    - "admin.accountbalance.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+ 
+rateLimitPolicy2:
+  enabled: false
+  rules:
+    - requests: 500
+      unit: Minute
+  pathRules: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podAnnotations:
+  instrumentation.opentelemetry.io/inject-dotnet: "true"
+
+podSecurityContext: {}
+
+securityContext: {}
+
+imagePullSecrets: []
+
+appsettings: |
+  {
+    "Sso": {
+      "Authority": "https://sso.example-org.ir",
+      "Audience": "accountbalance-api"
+    },
+    "BankServiceClient": {
+      "AuthBaseUrl": "https://account.tamin.ir",
+      "ServiceBaseUrl": "https://apim.tamin.ir",
+      "TemporarySaderatBaseUrl": "http://172.16.4.36:8086",
+      "TemporaryKeshavarziBaseUrl": "http://172.16.4.36:8086",
+      "GrantType": "client_credentials",
+      "Audience": "https://bankoperation.tamin.ir",
+      "ClientId": "816a66197110075e5c2e4d567b583074",
+      "ClientSecret": "41856750466a11320e720771010a60342d5c676e0d440b352c49263a4744880c",
+      "TimeoutSeconds": 10,
+      "IpgTimeoutSeconds": 30,
+      "ExpirationSafetyMarginSeconds": 30,
+      "SessionContextKey": "SESSIONID",
+      "SessionCookieName": "MY_SESSION"
+    },
+    "BanksList": {
+      "MaxParallelCalls": 16,
+      "BanksName": [
+        {
+          "Code": "01",
+          "Name": "bankrefah",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "02",
+          "Name": "bmi",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "03",
+          "Name": "bankmellat",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "04",
+          "Name": "tejaratbank",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "05",
+          "Name": "banksaderat",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "06",
+          "Name": "bankkeshavarzi",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "07",
+          "Name": "banksepah",
+          "AuthenticateType": "SessionAuth"
+        },
+        {
+          "Code": "50",
+          "Name": "behpardakht",
+          "AuthenticateType": "BaseAuth"
+        },
+        {
+          "Code": "51",
+          "Name": "sep",
+          "AuthenticateType": "BaseAuth"
+        }
+      ]
+    },
+    "Cors": {
+      "AllowedOrigins": "http://account-test.tamin.ir:9090;https://account.tamin.ir;https://apim.tamin.ir;https://bankoperation.tamin.ir;https://accountbalance-dev.tamin.ir/;https://account-pilot.tamin.ir/;https://me.tamin.ir;https://bankoperation.tamin.ir;https://accountbalance.tamin.ir/"
+    },
+    "Serilog": {
+      "Using": [
+        "Serilog.Sinks.Console",
+        "Serilog.Sinks.File",
+        "Serilog.Expressions"
+      ],
+      "MinimumLevel": {
+        "Default": "Debug"
+      },
+      "WriteTo": [
+        {
+          "Name": "Console"
+        },
+        {
+          "Name": "Conditional",
+          "Args": {
+            "expression": "@l = 'Verbose'",
+            "configureSink": [
+              {
+                "Name": "File",
+                "Args": {
+                  "path": "logs/verbose-.log",
+                  "rollingInterval": "Day",
+                  "retainedFileCountLimit": 14
+                }
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Conditional",
+          "Args": {
+            "expression": "@l = 'Debug'",
+            "configureSink": [
+              {
+                "Name": "File",
+                "Args": {
+                  "path": "logs/debug-.log",
+                  "rollingInterval": "Day",
+                  "retainedFileCountLimit": 14
+                }
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Conditional",
+          "Args": {
+            "expression": "@l = 'Information'",
+            "configureSink": [
+              {
+                "Name": "File",
+                "Args": {
+                  "path": "logs/information-.log",
+                  "rollingInterval": "Day",
+                  "retainedFileCountLimit": 14
+                }
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Conditional",
+          "Args": {
+            "expression": "@l = 'Warning'",
+            "configureSink": [
+              {
+                "Name": "File",
+                "Args": {
+                  "path": "logs/warning-.log",
+                  "rollingInterval": "Day",
+                  "retainedFileCountLimit": 14
+                }
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Conditional",
+          "Args": {
+            "expression": "@l = 'Error'",
+            "configureSink": [
+              {
+                "Name": "File",
+                "Args": {
+                  "path": "logs/error-.log",
+                  "rollingInterval": "Day",
+                  "retainedFileCountLimit": 14
+                }
+              }
+            ]
+          }
+        },
+        {
+          "Name": "Conditional",
+          "Args": {
+            "expression": "@l = 'Fatal'",
+            "configureSink": [
+              {
+                "Name": "File",
+                "Args": {
+                  "path": "logs/fatal-.log",
+                  "rollingInterval": "Day",
+                  "retainedFileCountLimit": 14
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "Enrich": [
+        "FromLogContext",
+        "WithMachineName",
+        "WithThreadId"
+      ]
+    },
+    "AllowedHosts": "*",
+    "TaminJwt": {
+      "Environment": "Production"
+    },
+    "ConnectionStrings": {
+      "OracleConnection": ""
+    },
+    "TaminTokenManager": {
+      "Configurations": {
+        "user": {
+          "Server": "https://account.tamin.ir/auth/server/token",
+          "ClientId": "816a66197110075e5c2e4d567b583074",
+          "ClientSecret": "41856750466a11320e720771010a60342d5c676e0d440b352c49263a4744880c",
+          "Audience": "audience-value",
+          "GrantType": "client_credentials",
+          "Resources": []
+        },
+        "sms": {
+          "Server": "https://account.tamin.ir/auth/server/token",
+          "ClientId": "3303312e0f19133702324102431b3619",
+          "ClientSecret": "13071b1413403d2e3d292f0b0e3c0c122d2f191934003e0913383d0e08443731",
+          "Audience": "audience-value",
+          "GrantType": "client_credentials",
+          "Resources": []
+        }
+      }
+    },
+    "BankBaseAuthenticationApi": {
+      "BaseAddress": "https://account.tamin.ir",
+      "grant_type": "client_credentials",
+      "audience": "https://bankoperation.tamin.ir",
+      "ClientId": "816a66197110075e5c2e4d567b583074",
+      "ClientSecret": "41856750466a11320e720771010a60342d5c676e0d440b352c49263a4744880c"
+    },
+    "CurrentUserApiConfiguration": {
+      "BaseAddress": "https://me.tamin.ir",
+      "ServiceUrl": "/api/v2.0/users/{0}/info",
+      "TokenKey": "user"
+    },
+    "SmsApiConfiguration": {
+      "BaseAddress": "https://sms.tamin.ir",
+      "TokenKey": "sms"
+    },
+    "BankServices": {
+      "Saderat": {
+        "Url": "https://is.bsi.ir/WebService_Bill/SendBill.asmx",
+        "TimeoutSeconds": 30,
+        "UserName": "taminsrv",
+        "Password": "srpvtn@64231"
+      }
+    }
+  }

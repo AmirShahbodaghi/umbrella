@@ -1,0 +1,180 @@
+
+environment: dev
+
+replicaCount: 1
+appName: requestback-dev
+appsettings_enabled: false  
+
+secrets:
+  enabled: false
+  refs:
+    - api-gateway-secrets
+
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: devops/test-app/request-test/backend/requestback
+  pullPolicy: IfNotPresent
+  tag: 1.0.0-dev
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+storage:
+  hostPath:
+    enabled: true
+    path: /home/matin/logs-tep-app
+    mountPath: /app/logs
+    type: DirectoryOrCreate   # optional
+
+  nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/logs-ap/ap-prod/cmds/rasa/sepas-get-net"
+    mountPath: /app/logs
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_shell_log:
+    enabled: false
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/logs-ap/ap-prod/cmds/rasa/sepas-get-net/shelllog"
+
+  nfs_apm:
+    enabled: false
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent  
+
+
+
+
+
+configmap:
+  # APP_NAME: "requestback-dev"
+  # Allowed browser origins for CORS - must match the frontend's public
+  # hostname(s) exactly (scheme + host, no trailing slash).
+  CORS_ORIGINS: "https://request-ui-prodenv.tamin.ir"
+
+
+
+
+httpRoute:
+  enabled: true
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - "request-back-prodenv.tamin.ir"
+  rules:
+    - port: 8080         
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+httpRoute2:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  hostnames:
+    - "rasa2.tamin.ir"
+  rules:
+    - port: 8081        
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+
+# -----------------------------------------------
+# Rate limit for primary service
+# -----------------------------------------------
+rateLimitPolicy:
+  enabled: false
+  rules:
+    - requests: 10
+      unit: Minute
+ 
+# -----------------------------------------------
+# Rate limit for secondary service (if service2 enabled)
+# -----------------------------------------------
+rateLimitPolicy2:
+  enabled: false           # set true to activate
+  rules:
+    # Rule 1 — global limit, applies to all requests
+    - requests: 100        # number of requests allowed
+      unit: Second         # Second / Minute / Hour
+ 
+    # Rule 2 — stricter limit for a specific header value
+    # useful for per-tenant or per-api-key limiting
+    - requests: 10
+      unit: Second
+      headers:
+        - name: x-api-key
+          value: "free-tier"
+
+ 
+
+resources:
+  limits:
+    cpu: 4000m
+    memory: 8Gi
+  requests:
+    cpu: 250m
+    memory: .5Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

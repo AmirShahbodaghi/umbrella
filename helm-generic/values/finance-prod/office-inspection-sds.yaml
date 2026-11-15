@@ -1,0 +1,158 @@
+environment: prod
+
+replicaCount: 2
+appName: sds-front-prod
+appsettings_enabled: false  
+
+secrets:
+  enabled: false
+  refs:
+    - sds-front-prod
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/finance/sds/office-inspection-sds-front
+  pullPolicy: IfNotPresent
+  tag: v2.0.8-prod
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+service:
+  enabled: true
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 80
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+storage:
+
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/sds/front"
+    mountPath: /u01/logs
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/sds/front/shelllog"
+
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate   
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+  
+  fourth_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  nfs_apm:
+    enabled: true
+    server: "172.16.5.139"
+    path: "/data/k8s-nfs/elastic-apm"
+    mountPath: /opt/apm-agent       
+
+configmap:
+  TZ: Asia/Tehran
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+httpRoute:
+  enabled: true
+  hostnames:
+    - "officesds.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080         
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+rateLimitPolicy:
+  enabled: true  
+  
+  rules:
+    - requests: 1000       
+      unit: Minute      
+      useXForwardedFor: false    
+  pathRules: []
+
+httpRoute2:
+  enabled: false
+  hostnames:
+    - "admin.officesds.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 80880       
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+ 
+rateLimitPolicy2:
+  enabled: false
+  rules:
+    - requests: 500
+      unit: Minute
+  pathRules: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+imagePullSecrets: []

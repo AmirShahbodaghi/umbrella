@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: finance-dev-apps
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://ci.tamin.ir/devops/cd/umbrella/finance/dev.git
+        revision: main
+        files:
+          - path: "*.yaml"
+  template:
+    metadata:
+      name: "{{appName}}"
+      namespace: argocd
+    spec:
+      project: finance-dev
+      sources:
+        - repoURL: https://ci.tamin.ir/devops/cd/umbrella/helm-generic.git
+          targetRevision: main
+          path: .
+          helm:
+            valueFiles:
+              - $values/{{path.filename}}
+        
+        - repoURL: https://ci.tamin.ir/devops/cd/umbrella/finance/dev.git
+          targetRevision: main
+          path: .
+          ref: values
+      
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: finance-dev
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

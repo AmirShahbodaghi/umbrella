@@ -1,0 +1,248 @@
+environment: prod
+
+replicaCount: 1
+appName: "karbarg-back-qc-prod"
+appsettings_enabled: false 
+
+image:
+  registry: pull-devops.tamin.ir
+  repository: ir.tamin/finance/karbarg/karbarg-spring/quality-control
+  pullPolicy: IfNotPresent
+  tag: v1.2.10-prod
+
+secrets:
+  enabled: true
+  refs:
+    - karbarg-back-qc-prod
+
+storage:
+
+  nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/karbarg/qc/back"
+    mountPath: /u01/logs
+
+  nfs_shell_log:
+    enabled: true
+    server: "172.16.5.139"
+    path: "finance-prod/karbarg/qc/shelllog" 
+
+  nfs_apm:
+    enabled: true
+    path: /data/k8s-nfs/elastic-apm
+    mountPath: /opt/apm-agent
+
+  pvc:
+    enabled: false
+    storageClass: "standard"
+    accessMode: ReadWriteMany
+    size: 10Gi
+
+  hostPath:
+    enabled: false
+    path: /***
+    mountPath: /***
+    type: DirectoryOrCreate   
+
+  second_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"
+
+  third_nfs:
+    enabled: false
+    server: "172.16.5.139"
+    path: "***"
+    mountPath: "***"  
+  
+  fourth_nfs:
+    enabled: true
+    server: "172.16.5.139"
+    path: /data/k8s-nfs/prometheus
+    mountPath: /opt/prometheus 
+
+jmxExporter:
+  port: 9010
+
+serviceMonitor:
+  interval: "15s"
+  scrapeTimeout: "10s"
+  path: "/metrics"   
+
+configmap:
+  CATALINA_OPTS: >-
+    -Xms2g
+    -Xmx4g
+    -XX:MaxMetaspaceSize=512m
+    -XX:+UseG1GC
+    -XX:+UseContainerSupport
+    -Djava.awt.headless=true
+    -Djdk.tls.ephemeralDHKeySize=2048
+    -Dorg.apache.catalina.security.SecurityListener.UMASK=0027
+    --add-opens=java.base/java.lang=ALL-UNNAMED
+    --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+    --add-opens=java.base/java.io=ALL-UNNAMED
+    --add-opens=java.base/java.util=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+    --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED
+    --enable-native-access=ALL-UNNAMED
+
+  ELASTIC_APM_VERIFY_SERVER_CERT: false
+  ELASTIC_APM_SERVER_URL: "http://apm-devops.tamin.ir:8201"
+  ELASTIC_APM_SERVICE_NAME: "karbarg-back-qc-prod"
+  ELASTIC_APM_ENVIRONMENT: "Finance-prod"
+  ELASTIC_APM_LOG_LEVEL: "INFO" 
+  ELASTIC_APM_APPLICATION_PACKAGES: "org.tamin,ir.tamin"
+  ELASTIC_APM_CAPTURE_BODY: "all"
+  ELASTIC_APM_CAPTURE_HEADERS: "true"
+  ELASTIC_APM_TRANSACTION_SAMPLE_RATE: "0.01" 
+  ELASTIC_APM_SPAN_FRAMES_MIN_DURATION: "10ms" 
+  ELASTIC_APM_STACK_TRACE_LIMIT: "50"
+
+  JAVA_TOOL_OPTIONS: >-
+    -javaagent:/opt/apm-agent/elastic-apm-agent.jar
+    -javaagent:/opt/prometheus/jmx_prometheus_javaagent-1.6.0.jar=9010:/opt/prometheus/jmx-exporter.yaml
+
+  QC_PORT: "8087"
+
+  SPRING_PROFILES_ACTIVE: "prod"
+
+  OAUTH_JWKS_URI: "https://account.tamin.ir/auth/.well-known/jwks.json"
+  OAUTH_AUDIENCE_URI: "http://api-gateway-service:8080"
+  OAUTH_CLIENT_ID: "112f0d1d383036032a29500c6f2e1503"
+  OAUTH_CLIENT_SECRET: "47078c804c47371d5a2d4d2571002d7469235e2315690b317183631e6d3d8258"
+  OAUTH_TOKEN_ENDPOINT: "https://account.tamin.ir/auth/server/token"
+  OAUTH_AUTH_ENDPOINT: "https://account.tamin.ir/auth/server/authorize"
+
+  JPA_DDL_AUTO: "none"
+  HIBERNATE_BATCH_SIZE: "500"
+  HIBERNATE_ORDER_INSERTS: "true"
+  HIBERNATE_ORDER_UPDATES: "true"
+  JPA_SHOW_SQL: "true"
+
+  KAFKA_SERVER: "172.16.5.146:9092,172.16.5.147:9092,172.16.5.148:9092"
+  KAFKA_CONSUMER_GROUP_ID: ""
+  KAFKA_AUTO_OFFSET_RESET: "earliest"
+  KAFKA_ISOLATION_LEVEL: "read_committed"
+  KAFKA_PRODUCER_ACKS: "all"
+  KAFKA_DELIVERY_TIMEOUT: "120000"
+  KAFKA_IDEMPOTENCE: "true"
+  KAFKA_LINGER_MS: "0"
+  KAFKA_MAX_IN_FLIGHT: "5"
+
+  LOG_LEVEL_SECURITY: "INFO"
+  LOG_LEVEL_WEB: "DEBUG"
+  LOG_LEVEL_JDBC: "DEBUG"
+  LOG_LEVEL_JDBC_TRACE: "TRACE"
+
+  TAMIN_APP_ID: "karbarg"
+  TAMIN_USER_BASE_URL: "https://me.tamin.ir/api/v2.0/users/{nationalCode}"
+  TAMIN_SECURITY_VERSION: "v2"
+  TAMIN_CONTRACTOR_API_URL: "http://karpaziran-back-prod:8080/api/Contractor/GetAllRoleByNationalCode/{nationalId}"
+
+  API_GET_PROJECT_BY_ID: "http://karbarg-back-prod:8080/api/project/{projectId}"
+  API_GET_DEBT_BY_PROJECT: "http://karbarg-back-prod:8080/api/project/debt/{projectId}"
+  API_GET_CONTRACTOR_EXECUTER: "http://karbarg-back-prod:8080/api/contractor/get-executer/{nationalId}"
+  API_GET_CONTRACTOR_INFO: "http://karbarg-back-prod:8080/api/contractor/get/{nationalId}"
+  API_GET_CONTRACTOR_EXPERTS: "http://karbarg-back-prod:8080/api/contractor/qc-experts"
+  API_GET_CONTRACTOR_MANAGERS: "http://karbarg-back-prod:8080/api/contractor/qc-managers"
+  API_GET_PROJECT_DEBT: "http://karbarg-back-prod:8080/api"
+  API_GET_PROJECT_FLOW: "http://karbarg-back-prod:8080/api"
+
+  QC_CONSUMER_GROUP: "qc-prod-group"
+  QC_KAFKA_TOPICS_PARTITIONS: "1"
+  QC_KAFKA_TOPICS_REPLICAS: "1"
+
+service:
+  enabled: true
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8087
+
+service2:
+  enabled: false
+  type: ClusterIP
+  ports: []
+
+resources:
+  limits:
+    cpu: 3000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 500Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+
+httpRoute:
+  enabled: true
+  hostnames:
+    - "quality-control.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+rateLimitPolicy:
+  enabled: false  
+  
+  rules:
+    - requests: 1000       
+      unit: Minute      
+      useXForwardedFor: false    
+  pathRules: []
+
+httpRoute2:
+  enabled: false
+  hostnames:
+    - "admin.bankoperation.tamin.ir"
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+  rules:
+    - port: 8081
+      matches:
+        - path:
+            type: PathPrefix
+            value: /admin
+
+rateLimitPolicy2:
+  enabled: false
+  rules:
+    - requests: 500
+      unit: Minute
+  pathRules: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
